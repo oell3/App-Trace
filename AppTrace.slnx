@@ -1,0 +1,7 @@
+<Solution>
+  <Folder Name="/Projektmappenelemente/" />
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+  </Folder>
+  <Project Path="AppTrace/AppTrace.csproj" />
+</Solution>
