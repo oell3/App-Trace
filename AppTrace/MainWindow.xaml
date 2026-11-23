@@ -14,6 +14,7 @@
                     <GridViewColumn Header="Hersteller" Width="200" DisplayMemberBinding="{Binding Publisher}" />
                     <GridViewColumn Header="Version" Width="110" DisplayMemberBinding="{Binding Version}" />
                     <GridViewColumn Header="Größe" Width="100" DisplayMemberBinding="{Binding FormattedSize}" />
+                    <GridViewColumn Header="Uninstall Pfad" Width="100" DisplayMemberBinding="{Binding UninstallPath}" />
                 </GridView>
             </ListView.View>
         </ListView>
