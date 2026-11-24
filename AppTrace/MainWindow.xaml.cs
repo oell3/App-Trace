@@ -1,15 +1,5 @@
-﻿using System.Diagnostics;
-using System.Text;
+﻿using AppTrace.Helpers;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
-using AppTrace.Helpers;
 
 namespace AppTrace
 {
@@ -18,17 +8,22 @@ namespace AppTrace
     /// </summary>
     public partial class MainWindow : Window
     {
+        private readonly ListViewSort _listView;
+
         public MainWindow()
         {
             InitializeComponent();
 
+            _listView = new ListViewSort(InstalledPrograms);
+
+
             Loaded += async (s, e) =>
-            {
-                var reader = new InstalledAppsReader();
-                var apps = await Task.Run(() => reader.GetInstalledApps());
-                InstalledPrograms.ItemsSource = apps;
-            };
-            
+                    {
+                        var reader = new InstalledAppsReader();
+                        var apps = await Task.Run(() => reader.GetInstalledApps());
+                        InstalledPrograms.ItemsSource = apps;
+                        ProgramCountLabel.Content = InstalledPrograms.Items.Count.ToString();
+                    };
         }
     }
 }

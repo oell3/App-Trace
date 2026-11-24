@@ -1,18 +1,17 @@
-﻿using AppTrace.Models;
+﻿using AppTrace.Helpers.Icons;
+using AppTrace.Helpers.RegistryEntrys;
+using AppTrace.Models;
 using Microsoft.Win32;
-using System.Diagnostics;
-using System.Drawing.Text;
 using System.IO;
 using System.Runtime.InteropServices;
-using System.Security.Policy;
-using System.Security.Principal;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Windows.Media.Imaging;
 using Windows.Management.Deployment;
 
 namespace AppTrace.Helpers
 {
-    public class InstalledAppsReader
+    public partial class InstalledAppsReader
     {
 
         private HistoryResult? _history;
@@ -20,10 +19,10 @@ namespace AppTrace.Helpers
         [DllImport("msi.dll", CharSet = CharSet.Unicode)]
         private static extern uint MsiGetProductInfo(string szProduct, string szAttribute, [Out] StringBuilder lpValueBuf, ref uint pcchValueBuf);
 
-        private string? GetMsiInstallLocation(string productCode)
+        private static string? GetMsiInstallLocation(string productCode)
         {
             // MSI ProductCodes sind immer GUIDs in geschweiften Klammern: {XXXXXXXX-XXXX-...}
-            if (!productCode.StartsWith("{") || !productCode.EndsWith("}"))
+            if (!productCode.StartsWith('{') || !productCode.EndsWith('}'))
                 return null;
 
             uint len = 512;
@@ -46,10 +45,11 @@ namespace AppTrace.Helpers
             var addedNames = new HashSet<string>(); // to avoid duplicates based on DisplayName
 
             string[] registryPath =
-            {
+            [
                  @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
-                @"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall"
-            };
+                @"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall",
+                @"Software\Microsoft\Windows\CurrentVersion\Uninstall"
+            ];
 
             foreach (var path in registryPath)
             {
@@ -59,7 +59,7 @@ namespace AppTrace.Helpers
             ReadFromRegistry(Registry.CurrentUser, registryPath[0], apps, addedNames);
 
             ReadStoreApps(apps, addedNames);
-
+            /*
             var burnBundles = BurnInstalledPackagesFinder.GetAllInstalledBundlePackages();
 
             // Merge burn bundles with regular installed apps
@@ -72,15 +72,16 @@ namespace AppTrace.Helpers
                     InstallationPath = bundle.InstallLocation
                 });
             }
+            */
 
-            return apps.OrderBy(a => a.Name).ToList();
+            return [.. apps.OrderBy(a => a.Name)];
         }
 
         private Dictionary<string, string>? _startMenuShortcuts;
 
         private Dictionary<string, string> GetStartMenuShortcuts()
         {
-            
+
 
             if (_startMenuShortcuts != null)
                 return _startMenuShortcuts;
@@ -88,10 +89,10 @@ namespace AppTrace.Helpers
             _startMenuShortcuts = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
             string[] startMenuPaths =
-            {
+            [
         Environment.GetFolderPath(Environment.SpecialFolder.CommonStartMenu), // C:\ProgramData\Microsoft\Windows\Start Menu
         Environment.GetFolderPath(Environment.SpecialFolder.StartMenu)        // %AppData%\Microsoft\Windows\Start Menu
-    };
+    ];
 
             if (_history != null)
             {
@@ -170,7 +171,7 @@ namespace AppTrace.Helpers
             return _startMenuShortcuts;
         }
 
-        private void AddWindowsServicesToCache(Dictionary<string, string> cache)
+        private static void AddWindowsServicesToCache(Dictionary<string, string> cache)
         {
             using var servicesKey = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Services");
             if (servicesKey == null) return;
@@ -197,7 +198,7 @@ namespace AppTrace.Helpers
             if (rk == null) return;
 
             // Einmalig VOR der Schleife laden statt 100x darin:
-      
+
 
             foreach (string skName in rk.GetSubKeyNames())
             {
@@ -224,6 +225,10 @@ namespace AppTrace.Helpers
                     string? publisher = sk.GetValue("Publisher") as string;
                     string installPath = GetCleanInstallPath(sk, skName, displayName, publisher);
 
+                    RegistryIcon registryIcon = new();
+
+                    BitmapSource? DisplayIcon = registryIcon.LoadImage(sk.GetValue("DisplayIcon") as string ?? null);
+
                     apps.Add(new AppInfo
                     {
                         Name = displayName,
@@ -232,7 +237,10 @@ namespace AppTrace.Helpers
                         SizeinMB = sizeMB,
                         LastStartUp = _history != null ? FindLastStartup(displayName, installPath, _history) : null,
                         InstallationPath = installPath,
-                        UninstallPath = sk.GetValue("UninstallString") as string ?? string.Empty
+                        UninstallPath = sk.GetValue("UninstallString") as string ?? string.Empty,
+                        Icon = DisplayIcon,
+                        RegistryKeyPath = $"{root.Name}\\{subKeyPath}\\{skName}",
+                        RegistrySize = sk.GetValue("EstimatedSize") as string ?? string.Empty
                     });
                 }
                 catch
@@ -241,19 +249,15 @@ namespace AppTrace.Helpers
                 }
             }
         }
-
         private Dictionary<string, string>? _msiProductFolderCache;
 
         private string? GetMsiFolderFromComponents(string productCode)
         {
-            if (!productCode.StartsWith("{") || !productCode.EndsWith("}"))
+            if (!productCode.StartsWith('{') || !productCode.EndsWith('}'))
                 return null;
 
             // 1. Einmalig beim ersten Aufruf alle MSI-Komponenten aus der Registry lesen (~30 ms!)
-            if (_msiProductFolderCache == null)
-            {
-                _msiProductFolderCache = BuildMsiProductFolderCache();
-            }
+            _msiProductFolderCache ??= BuildMsiProductFolderCache();
 
             // 2. Normale GUID "{12345678-1234-...}" in das gepackte MSI-Format umwandeln
             string packedGuid = PackMsiGuid(productCode);
@@ -265,7 +269,7 @@ namespace AppTrace.Helpers
             return null;
         }
 
-        private Dictionary<string, string> BuildMsiProductFolderCache()
+        private static Dictionary<string, string> BuildMsiProductFolderCache()
         {
             var exeCache = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             var anyFileCache = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -321,13 +325,13 @@ namespace AppTrace.Helpers
             if (clean.Length != 32) return string.Empty;
 
             char[] packed = new char[32];
-            int[] reverseMap = {
+            int[] reverseMap = [
         7,6,5,4,3,2,1,0,
         11,10,9,8,
         15,14,13,12,
         17,16,19,18,
         21,20,23,22,25,24,27,26,29,28,31,30
-    };
+    ];
 
             for (int i = 0; i < 32; i++)
             {
@@ -339,7 +343,7 @@ namespace AppTrace.Helpers
 
 
 
-        private void ReadStoreApps(List<AppInfo> apps, HashSet<string> addedNames)
+        private static void ReadStoreApps(List<AppInfo> apps, HashSet<string> addedNames)
         {
             try
             {
@@ -381,7 +385,7 @@ namespace AppTrace.Helpers
                         Publisher = pkg.PublisherDisplayName ?? "-",
                         Version = version,
                         SizeinMB = 0, // Store-Pakete speichern keine EstimatedSize in der Registry
-                        InstallationPath = installPath
+                        InstallationPath = installPath,
                     });
                 }
             }
@@ -442,7 +446,7 @@ namespace AppTrace.Helpers
                 return exactDir;
 
             // 2. Treffer ohne Versionsnummer (z. B. "VLC media player 3.0.21" -> "VLC media player")
-            string cleanName = Regex.Replace(appName, @"\s*(\d+(\.\d+)+|\(.*?\)|\[.*?\]).*$", "").Trim();
+            string cleanName = MyRegex().Replace(appName, "").Trim();
             if (cleanName.Length >= 3 && shortcuts.TryGetValue(cleanName, out string? cleanDir))
                 return cleanDir;
 
@@ -462,12 +466,12 @@ namespace AppTrace.Helpers
 
 
         // Extrahiert einen Dateipfad aus Befehlszeilen (inkl. Anführungszeichen & Parametern)
-        private string? ExtractDirectoryFromCommand(string? command)
+        private static string? ExtractDirectoryFromCommand(string? command)
         {
             if (string.IsNullOrWhiteSpace(command)) return null;
 
             // Sucht nach einem Pfad wie C:\...\datei.exe (mit oder ohne Anführungszeichen)
-            var match = Regex.Match(command, @"""?([a-zA-Z]:\\[^""*?|<>]+\.[a-zA-Z0-9]{2,4})""?");
+            var match = ExtractFilePathRegex().Match(command);
             if (match.Success)
             {
                 string filePath = match.Groups[1].Value;
@@ -478,7 +482,7 @@ namespace AppTrace.Helpers
         }
 
         // Prüft, ob der Ordner existiert und kein allgemeiner Windows-System/Cache-Ordner ist
-        private bool IsValidAppDirectory(string? path)
+        private static bool IsValidAppDirectory(string? path)
         {
             if (string.IsNullOrWhiteSpace(path)) return false;
 
@@ -504,16 +508,16 @@ namespace AppTrace.Helpers
         // Hilfsmethode: Entfernt Leerzeichen, Bindestriche & Sonderzeichen ("U-Therm" -> "utherm")
         private static string NormalizeName(string input)
         {
-            return Regex.Replace(input, @"[^a-zA-Z0-9äöüÄÖÜß]", "").ToLowerInvariant();
+            return NormalizationRegex().Replace(input, "").ToLowerInvariant();
         }
 
-        private string? FindInStandardFolders(string appName, string? publisher)
+        private static string? FindInStandardFolders(string appName, string? publisher)
         {
-            string baseName = Regex.Replace(appName, @"\s*(release|\d+(\.\d+)+|\(.*?\)|\[.*?\]|Common Components).*$", "", RegexOptions.IgnoreCase).Trim();
+            string baseName = StripVersionRegex().Replace(appName, "").Trim();
             if (baseName.Length < 3) return null;
 
             string[] searchRoots =
-            {
+            [
          Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
     Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86),
     Environment.GetFolderPath(Environment.SpecialFolder.CommonProgramFiles),    // C:\Program Files\Common Files
@@ -521,7 +525,7 @@ namespace AppTrace.Helpers
     Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Programs"),
     Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
     Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData)
-    };
+    ];
 
             // Mögliche übergeordnete Hersteller-/Gruppenordner sammeln:
             // 1. Der Publisher selbst ("Hottgenroth Software AG")
@@ -530,7 +534,7 @@ namespace AppTrace.Helpers
             if (!string.IsNullOrWhiteSpace(publisher) && publisher != "Unknown" && publisher != "-")
                 vendorCandidates.Add(publisher.Trim());
 
-            string[] nameWords = baseName.Split(new[] { ' ', '-', '_' }, StringSplitOptions.RemoveEmptyEntries);
+            string[] nameWords = baseName.Split([' ', '-', '_'], StringSplitOptions.RemoveEmptyEntries);
             if (nameWords.Length >= 2 && nameWords[0].Length >= 3)
                 vendorCandidates.Add(nameWords[0]);
 
@@ -560,7 +564,7 @@ namespace AppTrace.Helpers
 
                     // Restname ohne das Hersteller-Präfix bilden ("HSETU U-Therm" -> "U-Therm")
                     string strippedName = baseName.StartsWith(vendor, StringComparison.OrdinalIgnoreCase)
-                        ? baseName.Substring(vendor.Length).Trim(' ', '-', '_')
+                        ? baseName[vendor.Length..].Trim(' ', '-', '_')
                         : baseName;
 
                     string normStripped = NormalizeName(strippedName);
@@ -577,11 +581,11 @@ namespace AppTrace.Helpers
                                 return subDir;
                             }
                         }
-                  
+
                     }
                     catch { }
 
-                    
+
 
                 }
                 // 3. Allgemeiner 2-Ebenen-Scan: C:\Program Files\<BeliebigerOrdner>\<AppName>
@@ -620,7 +624,7 @@ namespace AppTrace.Helpers
 
 
 
-        private void AddAppPathsToCache(Dictionary<string, string> cache)
+        private static void AddAppPathsToCache(Dictionary<string, string> cache)
         {
             string appPathsKey = @"SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths";
             foreach (var root in new[] { Registry.LocalMachine, Registry.CurrentUser })
@@ -644,7 +648,7 @@ namespace AppTrace.Helpers
             }
         }
 
-        private DateTime? FindLastStartup(string displayName, string installPath, HistoryResult history)
+        private static DateTime? FindLastStartup(string displayName, string installPath, HistoryResult history)
         {
             DateTime latest = DateTime.MinValue;
 
@@ -716,5 +720,17 @@ namespace AppTrace.Helpers
         }
         */
 
+        [GeneratedRegex(@"""?([a-zA-Z]:\\[^""*?|<>]+\.[a-zA-Z0-9]{2,4})""?")]
+        private static partial Regex ExtractFilePathRegex();
+
+        [GeneratedRegex(@"[^a-zA-Z0-9äöüÄÖÜß]")]
+        private static partial Regex NormalizationRegex();
+
+        [GeneratedRegex(@"\s*(release|\d+(\.\d+)+|\(.*?\)|\[.*?\]|Common Components).*$", RegexOptions.IgnoreCase)]
+        private static partial Regex StripVersionRegex();
+
+        [GeneratedRegex(@"\s*(\d+(\.\d+)+|\(.*?\)|\[.*?\]).*$")]
+        private static partial Regex MyRegex();
     }
+
 }

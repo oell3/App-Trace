@@ -1,12 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using Microsoft.Win32;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Security.Principal;
 using System.Text;
-using Microsoft.Win32;
+using WinRegistry = Microsoft.Win32.Registry;
+using WinRegistryKey = Microsoft.Win32.RegistryKey;
 
-namespace AppTrace.Helpers
+namespace AppTrace.Helpers.RegistryEntrys
 {
     public class HistoryResult
     {
@@ -79,7 +79,7 @@ namespace AppTrace.Helpers
                 if (string.IsNullOrEmpty(sid)) return;
 
                 string path = $@"SYSTEM\CurrentControlSet\Services\bam\State\UserSettings\{sid}";
-                using var baseKey = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64);
+                using var baseKey = WinRegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64);
                 using var key = baseKey.OpenSubKey(path);
                 if (key == null) return;
 
@@ -103,7 +103,7 @@ namespace AppTrace.Helpers
             try
             {
                 string basePath = @"Software\Microsoft\Windows\CurrentVersion\Explorer\UserAssist";
-                using var uaKey = Registry.CurrentUser.OpenSubKey(basePath);
+                using var uaKey = WinRegistry.CurrentUser.OpenSubKey(basePath);
                 if (uaKey == null) return;
 
                 foreach (string guid in uaKey.GetSubKeyNames())
@@ -145,7 +145,7 @@ namespace AppTrace.Helpers
                     int dashIndex = fileName.LastIndexOf('-');
                     if (dashIndex > 0)
                     {
-                        string exeName = fileName.Substring(0, dashIndex);
+                        string exeName = fileName[..dashIndex];
                         DateTime lastRun = File.GetLastWriteTime(file);
                         add(exeName, lastRun);
                     }
@@ -176,7 +176,7 @@ namespace AppTrace.Helpers
             {
                 if (path.StartsWith(kvp.Key, StringComparison.OrdinalIgnoreCase))
                 {
-                    return kvp.Value + path.Substring(kvp.Key.Length);
+                    return string.Concat(kvp.Value, path.AsSpan(kvp.Key.Length));
                 }
             }
             return path;
@@ -184,12 +184,12 @@ namespace AppTrace.Helpers
 
         private static string ResolveKnownFolderGuid(string path)
         {
-            if (path.StartsWith("{") && path.Length >= 38)
+            if (path.StartsWith('{') && path.Length >= 38)
             {
-                string guidPart = path.Substring(0, 38);
+                string guidPart = path[..38];
                 if (KnownFolderGuids.TryGetValue(guidPart, out string? baseFolder) && !string.IsNullOrEmpty(baseFolder))
                 {
-                    return baseFolder + path.Substring(38);
+                    return baseFolder + path[38..];
                 }
             }
             return path;
