@@ -1,20 +1,18 @@
-﻿using AppTrace.Models;
+﻿using AppTrace.Helpers.Icons;
+using AppTrace.Models;
 using Microsoft.Win32;
-using System.Diagnostics;
-using System.Drawing.Text;
 using System.IO;
 using System.Runtime.InteropServices;
-using System.Security.Policy;
-using System.Security.Principal;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Windows.Media.Imaging;
 using Windows.Management.Deployment;
 
 namespace AppTrace.Helpers
 {
     public class InstalledAppsReader
     {
-
+        int foundedExe = 0;
         private HistoryResult? _history;
 
         [DllImport("msi.dll", CharSet = CharSet.Unicode)]
@@ -48,7 +46,8 @@ namespace AppTrace.Helpers
             string[] registryPath =
             {
                  @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
-                @"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall"
+                @"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall",
+                @"Software\Microsoft\Windows\CurrentVersion\Uninstall"
             };
 
             foreach (var path in registryPath)
@@ -59,7 +58,7 @@ namespace AppTrace.Helpers
             ReadFromRegistry(Registry.CurrentUser, registryPath[0], apps, addedNames);
 
             ReadStoreApps(apps, addedNames);
-
+            /*
             var burnBundles = BurnInstalledPackagesFinder.GetAllInstalledBundlePackages();
 
             // Merge burn bundles with regular installed apps
@@ -72,6 +71,7 @@ namespace AppTrace.Helpers
                     InstallationPath = bundle.InstallLocation
                 });
             }
+            */
 
             return apps.OrderBy(a => a.Name).ToList();
         }
@@ -80,7 +80,7 @@ namespace AppTrace.Helpers
 
         private Dictionary<string, string> GetStartMenuShortcuts()
         {
-            
+
 
             if (_startMenuShortcuts != null)
                 return _startMenuShortcuts;
@@ -197,7 +197,7 @@ namespace AppTrace.Helpers
             if (rk == null) return;
 
             // Einmalig VOR der Schleife laden statt 100x darin:
-      
+
 
             foreach (string skName in rk.GetSubKeyNames())
             {
@@ -224,6 +224,10 @@ namespace AppTrace.Helpers
                     string? publisher = sk.GetValue("Publisher") as string;
                     string installPath = GetCleanInstallPath(sk, skName, displayName, publisher);
 
+                    RegistryIcon registryIcon = new RegistryIcon();
+
+                    BitmapSource DisplayIcon = registryIcon.LoadImage(sk.GetValue("DisplayIcon") as string ?? null);
+
                     apps.Add(new AppInfo
                     {
                         Name = displayName,
@@ -232,7 +236,10 @@ namespace AppTrace.Helpers
                         SizeinMB = sizeMB,
                         LastStartUp = _history != null ? FindLastStartup(displayName, installPath, _history) : null,
                         InstallationPath = installPath,
-                        UninstallPath = sk.GetValue("UninstallString") as string ?? string.Empty
+                        UninstallPath = sk.GetValue("UninstallString") as string ?? string.Empty,
+                        Icon = DisplayIcon,
+                        RegistryKeyPath = $"{root.Name}\\{subKeyPath}\\{skName}",
+                        RegistrySize = sk.GetValue("EstimatedSize") as string ?? string.Empty
                     });
                 }
                 catch
@@ -241,7 +248,6 @@ namespace AppTrace.Helpers
                 }
             }
         }
-
         private Dictionary<string, string>? _msiProductFolderCache;
 
         private string? GetMsiFolderFromComponents(string productCode)
@@ -381,7 +387,7 @@ namespace AppTrace.Helpers
                         Publisher = pkg.PublisherDisplayName ?? "-",
                         Version = version,
                         SizeinMB = 0, // Store-Pakete speichern keine EstimatedSize in der Registry
-                        InstallationPath = installPath
+                        InstallationPath = installPath,
                     });
                 }
             }
@@ -577,11 +583,11 @@ namespace AppTrace.Helpers
                                 return subDir;
                             }
                         }
-                  
+
                     }
                     catch { }
 
-                    
+
 
                 }
                 // 3. Allgemeiner 2-Ebenen-Scan: C:\Program Files\<BeliebigerOrdner>\<AppName>

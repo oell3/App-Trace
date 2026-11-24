@@ -1,23 +1,88 @@
 ﻿<Window x:Class="AppTrace.MainWindow"
+        x:Name="window"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:AppTrace"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
-    <Grid Margin="0,0,-114,-72">
-        <ListView x:Name="InstalledPrograms" d:ItemsSource="{d:SampleData ItemCount=5}" SelectionMode="Single" Margin="0,0,140,72" >
+        Title="MainWindow"
+        Height="1160"
+        Width="1899">
+
+    <Grid x:Name="MainGrid">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="40" />
+        </Grid.RowDefinitions>
+
+        <!-- Toolbar über die gesamte Fensterbreite -->
+        <ToolBarTray Grid.Row="0"
+                     HorizontalAlignment="Stretch">
+            <ToolBar HorizontalAlignment="Stretch">
+                <Button Content="Einstellungen" />
+            </ToolBar>
+        </ToolBarTray>
+
+        <!-- Hauptinhalt -->
+        <ListView x:Name="InstalledPrograms"
+                  Grid.Row="1"
+                  
+                  SelectionMode="Single"
+                  SelectionChanged="InstalledPrograms_SelectionChanged" Margin="0,10,1188,0">
+
             <ListView.View>
                 <GridView>
-                    <GridViewColumn Header="Programmname" Width="320" DisplayMemberBinding="{Binding Name}" />
-                    <GridViewColumn Header="Hersteller" Width="200" DisplayMemberBinding="{Binding Publisher}" />
-                    <GridViewColumn Header="Version" Width="110" DisplayMemberBinding="{Binding Version}" />
-                    <GridViewColumn Header="Größe" Width="100" DisplayMemberBinding="{Binding FormattedSize}" />
-                    <GridViewColumn Header="Uninstall Pfad" Width="100" DisplayMemberBinding="{Binding UninstallPath}" />
+                    <GridViewColumn Header="Icon"
+                                    Width="50">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                                <Image Source="{Binding Icon}"
+                                       Width="32"
+                                       Height="32"
+                                       Stretch="Uniform" />
+                            </DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+
+                    <GridViewColumn Header="Programmname"
+                                    Width="150"
+                                    DisplayMemberBinding="{Binding Name}" />
+
+                    <GridViewColumn Header="Hersteller"
+                                    Width="200"
+                                    DisplayMemberBinding="{Binding Publisher}" />
+
+                    <GridViewColumn Header="Version"
+                                    Width="110"
+                                    DisplayMemberBinding="{Binding Version}" />
+
+                    <GridViewColumn Header="Größe"
+                                    Width="70"
+                                    DisplayMemberBinding="{Binding FormattedSize}" />
+
+                    <GridViewColumn Header="Registrierungsgröße"
+                                    Width="130"
+                                    DisplayMemberBinding="{Binding RegistrySize}" />
                 </GridView>
             </ListView.View>
         </ListView>
 
+        <!-- Statusbereich -->
+        <StackPanel Grid.Row="2"
+                    Orientation="Horizontal"
+                    Margin="10,0"
+                    VerticalAlignment="Center">
+
+            <Label x:Name="label"
+                   Content="Gefundene Programme:"
+                   Padding="0" />
+
+            <Label x:Name="ProgramCountLabel"
+                   Content="0"
+                   Padding="0"
+                   Margin="10,0,0,0" />
+        </StackPanel>
     </Grid>
 </Window>

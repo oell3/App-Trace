@@ -1,15 +1,5 @@
-﻿using System.Diagnostics;
-using System.Text;
+﻿using AppTrace.Helpers;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
-using AppTrace.Helpers;
 
 namespace AppTrace
 {
@@ -27,8 +17,13 @@ namespace AppTrace
                 var reader = new InstalledAppsReader();
                 var apps = await Task.Run(() => reader.GetInstalledApps());
                 InstalledPrograms.ItemsSource = apps;
+                ProgramCountLabel.Content = InstalledPrograms.Items.Count.ToString();
             };
-            
+        }
+
+        private void InstalledPrograms_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+        {
+
         }
     }
 }
