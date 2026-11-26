@@ -13,7 +13,7 @@ namespace AppTrace.Helpers
 {
     public partial class InstalledAppsReader
     {
-
+        int foundedExe = 0;
         private HistoryResult? _history;
 
         [DllImport("msi.dll", CharSet = CharSet.Unicode)]
