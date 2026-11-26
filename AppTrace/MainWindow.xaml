@@ -50,8 +50,7 @@
 
                     <GridViewColumn Header="Programmname"
                                     Width="150"
-                                    DisplayMemberBinding="{Binding Name}"
-                                    />
+                                    DisplayMemberBinding="{Binding Name}"/>
 
                     <GridViewColumn Header="Hersteller"
                                     Width="200"

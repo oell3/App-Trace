@@ -8,12 +8,12 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows.Media.Imaging;
 using Windows.Management.Deployment;
+using WinRegKey = Microsoft.Win32.Registry;
 
 namespace AppTrace.Helpers
 {
     public partial class InstalledAppsReader
     {
-
         private HistoryResult? _history;
 
         [DllImport("msi.dll", CharSet = CharSet.Unicode)]
@@ -53,26 +53,13 @@ namespace AppTrace.Helpers
 
             foreach (var path in registryPath)
             {
-                ReadFromRegistry(Registry.LocalMachine, path, apps, addedNames);
+                ReadFromRegistry(WinRegKey.LocalMachine, path, apps, addedNames);
             }
 
-            ReadFromRegistry(Registry.CurrentUser, registryPath[0], apps, addedNames);
+            ReadFromRegistry(WinRegKey.CurrentUser, registryPath[0], apps, addedNames);
 
             ReadStoreApps(apps, addedNames);
-            /*
-            var burnBundles = BurnInstalledPackagesFinder.GetAllInstalledBundlePackages();
 
-            // Merge burn bundles with regular installed apps
-            foreach (var bundle in burnBundles)
-            {
-                apps.Add(new AppInfo
-                {
-                    Name = bundle.BundleName,
-                    Version = bundle.PackageVersion,
-                    InstallationPath = bundle.InstallLocation
-                });
-            }
-            */
 
             return [.. apps.OrderBy(a => a.Name)];
         }

@@ -9,4 +9,11 @@
 	  <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Compile Remove="Helpers\Registry\**" />
+    <EmbeddedResource Remove="Helpers\Registry\**" />
+    <None Remove="Helpers\Registry\**" />
+    <Page Remove="Helpers\Registry\**" />
+  </ItemGroup>
+
 </Project>
